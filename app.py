@@ -24,6 +24,7 @@ df_area = conn.read(spreadsheet=spreadsheet_master, worksheet="Area")
 df_gender = conn.read(spreadsheet=spreadsheet_master, worksheet="Gender")
 df_generation = conn.read(spreadsheet=spreadsheet_master, worksheet="Generation")
 df_yos = conn.read(spreadsheet=spreadsheet_master, worksheet="YearOfService")
+df_group = conn.read(spreadsheet=spreadsheet_master, worksheet="Group")
 
 
 class App:
@@ -42,6 +43,7 @@ class App:
     key_gender = "key_gender"
     key_generation = "key_generation"
     key_yos = "key_yos"
+    key_group = "key_group"
     
     criteria = {
         "domain": [],
@@ -50,7 +52,8 @@ class App:
         "area": [],
         "gender": [],
         "generation": [],
-        'yos':[]
+        'yos':[],
+        'group': []
     }
     
     def __init__(self):
@@ -96,12 +99,22 @@ class App:
         bands = "" if self.criteria["band"] == [] else str(self.criteria["band"]).replace("[","").replace("]","")
         areas = "" if self.criteria["area"] == [] else str(self.criteria["area"]).replace("[","").replace("]","")
         genders = "" if self.criteria["gender"] == [] else str(self.criteria["gender"]).replace("[","").replace("]","")
+        generations = "" if self.criteria["generation"] == [] else str(self.criteria["generation"]).replace("[","").replace("]","")
+        yos = "" if self.criteria["yos"] == [] else str(self.criteria["yos"]).replace("[","").replace("]","")
+        groups = "" if self.criteria["group"] == [] else str(self.criteria["group"]).replace("[","").replace("]","")
+        
         if bands != "":
             result = result + f"and a.band in ({bands})\n"
         elif areas != "":
             result = result + f"and a.area in ({areas})\n"
         elif genders != "":
             result = result + f"and a.gender in ({genders})\n"
+        elif generations != "":
+            result = result + f"and a.generation in ({generations})\n"
+        elif yos != "":
+            result = result + f"and a.years_of_service in ({yos})\n"
+        elif groups != "":
+            result = result + f"and f.name in ({groups})\n"
         else:
             result = ""
         
@@ -115,10 +128,12 @@ class App:
         self.criteria["gender"] = st.session_state[self.key_gender]
         self.criteria["generation"] = st.session_state[self.key_generation]
         self.criteria["yos"] = st.session_state[self.key_yos]
+        self.criteria["group"] = st.session_state[self.key_group]
         command_criteria = self.build_command_criteria()
         respondercount = sqldf(f"""
                                select count(*) as responderCount 
                                from df_response_header as a
+                               left join df_group as f on f.id = a.grp
                                where 1=1
                                {command_criteria}
                                """)
@@ -165,6 +180,7 @@ class App:
                 left join df_question as c on c.Id = b.Question
                 inner join df_domain as d on d.Id = c.Domain 
                 left join df_option as e on e.Id = b.Option
+                left join df_group as f on f.Id = a.grp
                 where 1=1
                 and d.Id = {id_domain}
                 {command_criteria}
@@ -206,7 +222,7 @@ class App:
             inner join df_response_detail as b on a.Id = b.ResponseId
             left join df_question as c on c.Id = b.Question
             inner join df_domain as d on d.Id = c.Domain 
-            left join df_option as e on e.Id = b.Option
+            inner join df_option as e on e.Id = b.Option
             where 1=1
             and d.Id = {id_domain}
             group by d.Name
@@ -247,6 +263,7 @@ class App:
                         a.years_of_service,
                         a.area,
                         a.generation,
+                        a.grp,
                         b.Question,
                         b.Option,
                         cast(e.Grade as varchar(1)) as Rank
@@ -255,6 +272,7 @@ class App:
                     left join df_question as c on c.Id = b.Question
                     inner join df_domain as d on d.Id = c.Domain 
                     left join df_option as e on e.Id = b.Option
+                    left join df_group as f on f.Id = a.grp
                     where 1=1
                     and b.Question = {row['id']}
                     {command_criteria}
@@ -335,20 +353,23 @@ class App:
     
     def build_sidebar(self):
         with self.sitebar:
-            st.multiselect("Select Domain", df_domain['Name'], [], on_change=self.apply_criteria, key=self.key_domain)
-            st.selectbox("Average per Domain", ['Yes', 'No'], index=1, key='selected_avg', on_change=self.apply_criteria)
-            st.multiselect("Select Band", df_band['Band'], [], on_change=self.apply_criteria, key=self.key_band)
-            st.multiselect("Select Area", df_area['Area'], [], on_change=self.apply_criteria, key=self.key_area)
-            st.multiselect("Select Gender", df_gender['Gender'], [], on_change=self.apply_criteria, key=self.key_gender)
-            st.multiselect("Select Generation", df_generation['Generation'], [], on_change=self.apply_criteria, key=self.key_generation)
-            st.multiselect("Select YoS", df_yos['YoS'], [], on_change=self.apply_criteria, key=self.key_yos)
-            
+            st.title("Search Criteria")
             col1, col2 = st.columns([1,1])
+            
             with col1:
+                st.multiselect("Select Domain", df_domain['Name'], [], on_change=self.apply_criteria, key=self.key_domain)
+                st.multiselect("Select Band", df_band['Band'], [], on_change=self.apply_criteria, key=self.key_band)
+                st.multiselect("Select Gender", df_gender['Gender'], [], on_change=self.apply_criteria, key=self.key_gender)
+                st.multiselect("Select Year of Service", df_yos['YoS'], [], on_change=self.apply_criteria, key=self.key_yos)
                 st.button(  "OK", on_click=self.apply_criteria, key="btnShow")
             with col2:
+                st.selectbox("Average per Domain", ['Yes', 'No'], index=1, key='selected_avg', on_change=self.apply_criteria)
+                st.multiselect("Select Area", df_area['Area'], [], on_change=self.apply_criteria, key=self.key_area)
+                st.multiselect("Select Generation", df_generation['Generation'], [], on_change=self.apply_criteria, key=self.key_generation)    
+                st.multiselect("Select Project/Group", df_group['Name'], [], on_change=self.apply_criteria, key=self.key_group)
                 st.button("Reset", on_click=self.reset_criteria, key="btnReset")
-
+            
+            
     def build_charts(self):
         fig = px.bar(
                 self.df,
