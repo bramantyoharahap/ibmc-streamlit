@@ -199,16 +199,21 @@ class App:
                     count(*) as ResponderCount
                 FROM T
                 GROUP BY Option
+            ),
+            T3 AS(
+                SELECT *,
+                    ROUND(AVG(ResponderCount/{float(respondercount)}*100), 2)||'%' as Percentage,
+                    AVG(ResponderCount/{float(respondercount)}) as AvgResponderCount
+                FROM T2
+                GROUP BY Color
+                ORDER BY CASE WHEN Color = '#72d8ff' THEN 1
+                        WHEN Color = '#b5e6a2' THEN 2
+                        WHEN Color = '#daf2d0' THEN 3
+                        WHEN Color = '#ffff47' THEN 4
+                        WHEN Color = '#fd5454' THEN 5 ELSE '' END
             )
-            SELECT *,
-                ROUND(AVG(ResponderCount/{float(respondercount)}*100), 2)||'%' as Percentage
-            FROM T2
-            GROUP BY Color
-            ORDER BY CASE WHEN Color = '#72d8ff' THEN 1
-                    WHEN Color = '#b5e6a2' THEN 2
-                    WHEN Color = '#daf2d0' THEN 3
-                    WHEN Color = '#ffff47' THEN 4
-                    WHEN Color = '#fd5454' THEN 5 ELSE '' END;
+            SELECT *
+            FROM T3
             """
         )
 
@@ -239,14 +244,14 @@ class App:
         fig = px.bar(
             _df,
             x="Rank",
-            y="ResponderCount",
+            y="AvgResponderCount",
             color="Color",
             color_discrete_map="identity",
             text_auto=False,
             text="Percentage"
         )
         
-        fig.update_yaxes(range=[0, respondercount], dtick=2)
+        fig.update_yaxes(range=[0, 1], tickformat=',.0%')
         st.plotly_chart(fig)
     
     def apply_detail(self, questions, respondercount):
@@ -335,7 +340,7 @@ class App:
                 color="Color",
                 color_discrete_map="identity",
                 text_auto=False,
-                text="Percentage"
+                text="ResponderCount"
             )
 
             fig.update_yaxes(range=[0, respondercount], dtick=2)
