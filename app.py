@@ -343,7 +343,7 @@ class App:
                 text="ResponderCount"
             )
 
-            fig.update_yaxes(range=[0, respondercount], dtick=2)
+            fig.update_yaxes(range=[0, respondercount], dtick=10)
             st.plotly_chart(fig)    
     
     def reset_criteria(self):
