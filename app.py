@@ -254,6 +254,11 @@ class App:
         fig.update_yaxes(range=[0, 1], tickformat=',.0%')
         st.plotly_chart(fig)
     
+    def show_option_legend(self, qid):
+        _df = sqldf(f"select id, option from df_option where questionid = {qid}")
+        # st.write(_df.set_index(_df.columns[0]))
+        st.dataframe(_df.set_index(_df.columns[0]), use_container_width=True)
+    
     def apply_detail(self, questions, respondercount):
         for i, row in questions.iterrows():
             command_criteria = self.build_command_criteria()
@@ -345,6 +350,8 @@ class App:
 
             fig.update_yaxes(range=[0, respondercount], dtick=10)
             st.plotly_chart(fig)    
+            
+            self.show_option_legend(row['id'])
     
     def reset_criteria(self):
         st.session_state[self.key_domain] = []
@@ -374,7 +381,6 @@ class App:
                 st.multiselect("Select Project/Group", df_group['Name'], [], on_change=self.apply_criteria, key=self.key_group)
                 st.button("Reset", on_click=self.reset_criteria, key="btnReset")
             
-            
     def build_charts(self):
         fig = px.bar(
                 self.df,
@@ -396,5 +402,6 @@ class App:
         #     )
         # st.plotly_chart(fig)
         
+    
 app = App()
 
