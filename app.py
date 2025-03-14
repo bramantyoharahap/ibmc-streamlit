@@ -26,7 +26,6 @@ df_generation = conn.read(spreadsheet=spreadsheet_master, worksheet="Generation"
 df_yos = conn.read(spreadsheet=spreadsheet_master, worksheet="YearOfService")
 df_group = conn.read(spreadsheet=spreadsheet_master, worksheet="Group")
 
-
 class App:
     _df = None
     fig = None
@@ -44,7 +43,7 @@ class App:
     key_generation = "key_generation"
     key_yos = "key_yos"
     key_group = "key_group"
-    
+    result = ""
     criteria = {
         "domain": [],
         "average": False,
@@ -95,30 +94,35 @@ class App:
             self.build_charts()
             
     def build_command_criteria(self):
-        result = ""
         bands = "" if self.criteria["band"] == [] else str(self.criteria["band"]).replace("[","").replace("]","")
         areas = "" if self.criteria["area"] == [] else str(self.criteria["area"]).replace("[","").replace("]","")
         genders = "" if self.criteria["gender"] == [] else str(self.criteria["gender"]).replace("[","").replace("]","")
         generations = "" if self.criteria["generation"] == [] else str(self.criteria["generation"]).replace("[","").replace("]","")
         yos = "" if self.criteria["yos"] == [] else str(self.criteria["yos"]).replace("[","").replace("]","")
         groups = "" if self.criteria["group"] == [] else str(self.criteria["group"]).replace("[","").replace("]","")
+        c_bands = ""
+        c_areas = ""
+        c_genders = ""
+        c_generations = ""
+        c_yos = ""
+        c_groups = ""
         
         if bands != "":
-            result = result + f"and a.band in ({bands})\n"
-        elif areas != "":
-            result = result + f"and a.area in ({areas})\n"
-        elif genders != "":
-            result = result + f"and a.gender in ({genders})\n"
-        elif generations != "":
-            result = result + f"and a.generation in ({generations})\n"
-        elif yos != "":
-            result = result + f"and a.years_of_service in ({yos})\n"
-        elif groups != "":
-            result = result + f"and f.name in ({groups})\n"
-        else:
-            result = ""
+            c_bands = f"and a.band in ({bands})\n"
+        if areas != "":
+            c_areas = f"and a.area in ({areas})\n"
+        if genders != "":
+            c_genders = f"and a.gender in ({genders})\n"
+        if generations != "":
+            c_generations = f"and a.generation in ({generations})\n"
+        if yos != "":
+            c_yos = f"and a.years_of_service in ({yos})\n"
+        if groups != "":
+            c_groups = f"and f.name in ({groups})\n"
         
-        return result
+        self.result = c_bands + c_areas + c_genders + c_generations + c_yos + c_groups
+        
+        return self.result
     
     def apply_criteria(self):
         self.criteria["domain"] = st.session_state[self.key_domain]
@@ -161,6 +165,7 @@ class App:
                
     def apply_average(self, id_domain, respondercount):
         command_criteria = self.build_command_criteria()
+        
         _df = sqldf(
             f"""
             WITH T AS(            
